@@ -1,0 +1,212 @@
+1) Download iso file and create a bootable partition.
+
+	You can use rufus in windows, dd in linux based systems to create the partition
+
+2) Boot from the pendrive
+	
+	Plug in the pendrive, and boot from the pendrive. You might have to change the boot order in your bios menu.
+
+3) Internet connection
+	
+	The most important entity in the installation. You need a working internet connection without proxy. A wired connection is recommended (USB tethering will not work by default) as it's interface is enabled by default. If the wireless drivers are pre installed, you can use "wifi-menu" command and connect to a wireless network.
+	To check internet connection, "ping -c 3 www.google.com". If you see data packets received and transmitted, you are all set. If not, you have to do something about it. XD
+	Oh, btw, if you are using wifi, make sure to "pacman -S iw wpa_supplicant dialog wpa-actiond" so that you can download the necessary stuff for connecting after installation.
+
+4) Disk Partioning
+
+	Well, here comes the next important step. 
+	
+	If you don't care about the other operating systems, you can erase the partion table. You can use the "cfdisk /dev/sdX"(replace X with your disk's letter) and delete all partitions. After that you have to create three new partitions. One is the boot partition, you can give it around 0.5 GB of space on the safe side. Then create two more one for the root partition (20 GB should be more than enough) and the rest of the space for your stuff. You have to format the efi partition as "mkfs.fat -F32 /dev/sda1" (the number might change) and the others as "mkfs.ext4 /dev/sdaX". If you have a smaller ram, you might want to create one more partition for swap. Format it with "mkswap /dev/sdaX" command and mark it as the swap partition with "swapon /dev/sdaX".
+
+	But, if you ae dual booting, and already have existing data, take care while partitioning. You need not create the EFI partioning as it should already exist. Create the other 2 partitions (3 if you want swap) and format them in a similar way.
+
+	After partioning we should mount them.
+	"mount /dev/sdaX /mnt" (Your root partition) 
+	"mkdir /mnt/home && mount /dev/sdaY /mnt/home" (Your home partiion)
+	"mkdir /mnt/boot && mount /dev/sdaZ /mnt/boot" (Your EFI partition)
+
+5) Installation
+
+	Here comes the main part. Let's proceed to installation. "pacstrap /mnt base base-devel". This should take some time. Let it download its stuff and install.
+
+6) Generate fstab for auto mount
+	
+	The fstab file in /etc/fstab takes care of automatically mounting the partitions on boot. Let's ask it to mount these partitions automatically.
+	"genfstab -U /mnt >> /mnt/etc/fstab"
+	This is an installation script and will not be present in your system after installation as it is not recommended for other use XD
+
+7) Change the root system
+
+	"arch-chroot /mnt" . With this, you should be abe to access your newly installed OS.
+
+8) Set keyboard configuration and time.
+
+	"ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime" (You can check the different zones present in the zoneinfo directory"
+	"hwclock --systohc --utc" (Sets hardware clock to UTC)
+	"vi /etc/locale.gen" (Uncomment the language of your choice. If you are looking for english, you should uncomment en_US.UTF-8)
+	"echo LANG=en_US.UTF-8 > /etc/locale.conf" (Add your language to the locale.conf)
+
+9) Configure Host
+
+	"echo athubhai > /etc/hostname" (Replace athubhai with the hostname of your choice)
+
+10) Create an user
+
+	First create a root password with "passwd"
+	Then create an user with "useradd -m -G wheel,users -s /bin/bash <username> "
+	After that "visudo" and uncomment the '%wheel (ALL) =(ALL) ALL' line
+	Set the user password with "passwd <username>"
+
+11) NetworkManager
+	
+	Now, you don't want to manually connect to the network. Download thenetwork manager and enable it.
+	"sudo pacman -S networkmanager"
+	"sudo systemctl enable NetworkManager.service"
+	"sudo systemctl disable dhcpcd@enp2s0.service" (Disable the manual launch. If it gives an error, find the name of your interface and replace enp2s0
+
+12) GrubBootlaoder
+
+	Now, for your bootlooder.
+	"pacman -S grub efibootmgr"
+	"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB" (Make sure your efi partition is mounted on /boot)
+
+	If you want windows option in the boot loader, "pacman -S os-prober" . Now mount the partition where the windows was installed. " mkdir /mnt/windows && mount /dev/sdaX /mnt/windows ".
+
+	Now, finally generate the config file. "grub-mkconfig -o /boot/grub/grub.cfg"
+	
+
+13) Reboot
+	
+	Bingo, you are done. Now "exit" and "reboot".
+
+
+Now you have arch linux installed in your laptop. Boot and have a look XD. Not very promising is it? Well, you have to build every thing on your own. Well, let's have a look at what all are the post installation stuff you can do.
+
+1) Organinsing your repositories
+
+	You will be downloading a lot of packages from the repositories. It is a must to make sure your package manager prefers the repos with faster access.
+	"sudo pacman -S reflector"
+	"reflector --latest 200 --protocol http --protocol https --protocol ftp --sort rate --save /etc/pacman.d/mirrorlist --verbose"
+
+2) Proxy
+
+	If you are behind a proxy it is good to export them to the environment variables by default.
+	"sudo vim /etc/environment" and paste the following content (Change the proxy server accordingly).
+	------------------------------
+	http_proxy=http://172.16.2.30:8080
+	https_proxy=http://172.16.2.30:8080
+	ftp_proxy=http://172.16.2.30:8080
+	rsync_proxy=http://172.16.2.30:8080
+	no_proxy="localhost, 127.0.0.1"
+	----------------------------------
+	To retain these variables when using commands with root access, you have to edit your visudo.
+	
+	"sudo visudo" and add this to the end of the file.
+	------------------------------------------------------
+	Defaults env_keep += "http_proxy https_proxy ftp_proxy no_proxy rsync_proxy"
+	------------------------------------------------------
+
+
+3) Basic necessities and Window manager.
+
+	If you try to do render any GUI, you will need a display manager and to render windows, you will need a window manager/ desktop environment. Here we will use the window manager i3.
+
+	"pacman -S bash-completion xorg-server xorg-xinit mesa i3 dmenu xorg xorg-xinit"
+	"pacman -S xf86-video-intel" (For intel drivers)
+	"pacman -S alsa-utils pulseaudio pavucontrol" (For audio)
+	"pacman -S xf86-input-synaptic" (For touchpads)
+	"pacman -S vim" (Editor)
+
+	Now ask xorg to start i3 whenever it starts.
+	"vim ~/.xinitrc"
+
+	And now paste this in the file
+
+	----------------
+	#! /bin/bash
+	exec i3
+	----------------
+
+	Now we want to xorg to start whenever we boot.
+	"sudo vim /etc/profile"
+
+	And append this to the end of the file
+	----------------
+	if [[ "$(tty)" == '/dev/tty1' ]]; then
+    	exec startx
+	fi
+	----------------
+	(This will work only if you are in tty1)
+
+	Now let's go about installing other basic stuff.
+	"sudo pacman -S firefox chromium terminator" (Browsers and terminal emulator)
+	"sudo pacman -S libreoffice-fresh hunspell hunspell-en_US" (Alternative for MS Office)
+	"sudo pacman -S wget ranger tree zathura lynx gparted laptop-mode-tools ntfs-3g feh" (terminal browser, pdf viewer, image viewer, power management tools, directory tree)
+	"sudo pacman -S ttf-dejavu ttf-inconsolata" (Fonts)
+	"sudo pacman -S smplayer" (Video Player)
+	"sudo pacman -S dosfstools" (File systems)
+
+4) Install AUR helper
+
+	AUR helpers are used to download packages from the unoffocial repositories.
+	"sudo pacman -S git"
+	"git clone https://aur.archlinux.org/yay.git"
+	"cd yay && makepkg -si"
+	Now you have "yay" installed. The usage is similar to pacman.
+
+5) Terminator configuration and zsh installation.
+
+	Now let's make your terminator fancy. Go to terminator and edit your preferences regarding the general outlook.
+	Now install zsh and change the shell.
+	"sudo pacman -S zsh"
+	"sudo chsh -s /bin/zsh"
+
+	And power up your zsh with prezto.
+	"git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto""
+	
+	Add the following to the bottom of your ~/.zshrc file.
+	" source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" "
+
+	Now install some more fonts for the themes to work.
+	" sudo pamcan -S powerline-fonts"
+
+	Now update the {~/.zpreztorc} file to get some fancy ass configuration.
+
+6) Touchpad configuration.
+
+	Now you might have realised your touchpad does not work efficiently. You might want to add this config file under {/etc/X11/xorg.conf.d/70-synaptics.conf}
+
+7) i3bar and i3status configuration.
+
+	Download nm-applet and blueman (For network manager and bluetooth)
+	"sudo pacman -S nm-applet blueman"
+	
+	Download xss-lock and i3lock for screen lock.
+	"sudo pacman -S xss-lock i3lock"
+
+	Download xbacklight and place this screen config file under {/etc/X11/xorg.conf.d/20-intel.conf}
+
+	Now download some fancy wallpapers for your screen saver and background.
+
+	Now place the i3 config file under {~/.config/i3/config} and i3 status config under {~/.config/i3status/config}.
+ 
+8) Permanent mounting
+
+	Now you might want to permanently mount dome of your partition that does not mount on its own.
+	
+	Create a permanent mounting point for the partition.
+	"mkdir /mnt/partition"
+
+	Now get the UUID of the partition with sudo blkid. Now add the partition to /etc/fstab.
+	------------------------------------
+	UUID=XX /mnt/put ntfs default 0 0
+	------------------------------------
+
+	Also download udiskctl for mounting usb drives.
+	"sudo pacman -S udiskctl"
+
+9) Config your zshrc file.
+
+	Add aliases to facilitate your life with your laptop.
+	Place the config file in {~/.zshrc}
+	Also make sure you config your ssh.
