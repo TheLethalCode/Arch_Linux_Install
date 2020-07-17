@@ -27,28 +27,39 @@ source ~/.zprezto/init.zsh
 # Additional Path Locations
 export PATH=$PATH:~/.local/bin
 
-# Virtual env
-source ~/.local/bin/virtualenvwrapper.sh
-
 # Aliases
 
 ## Navigation
 alias kous="cd ~/Kousshik"
-alias stud="cd ~/Studies/Sem_4"
+alias stud="cd ~/Studies/Sem_6"
 alias dc="cd ~/The_other/DC++"
-alias dcpp="cd ~/airdcpp-webclient && ./airdcppd"
 alias photos="cd ~/Kousshik/Photos"
 alias down="cd ~/Downloads"
 alias prog="cd ~/Programming"
 alias gitr="cd ~/Programming/git"
-alias rand="cd ~/Programming/Random"
-alias CP="cd ~/Programming/Random/CP/"
-alias agv="cd ~/Programming/AGV"
-alias catws1="cd ~/Programming/AGV/catkin_ws1/src"
-alias xop="xdg-open"
+alias CP="cd ~/Programming/CP/"
+alias temp="CP && cd templates"
+alias cf="CP && cd Codeforces/codes"
+alias xop="mimeopen -n"
+
+## Wget
+alias wgetu="wget -U 'Mozilla/5.0 (X11; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0'"
 
 ## Dynamic port forward
-alias forward=ssh -D 1080 digoce -nNT
+alias forward="ssh -D 1080 digoce -nNT"
 
 ## Mounting
 alias drive="udisksctl mount -b"
+
+## Virtual env
+alias virt="source ~/.local/bin/virtualenvwrapper.sh"
+
+## Anime
+alias anime="python ~/Programming/python/history_scrap/add.py"
+alias list="cat ~/Programming/python/history_scrap/anime.txt"
+
+## Background Change
+alias bgc="feh --randomize --bg-fill ~/Downloads/Wallpapers/*"
+
+## Update
+alias update="sudo pacman -Syu && reboot"
